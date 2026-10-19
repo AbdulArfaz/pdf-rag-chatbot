@@ -25,7 +25,6 @@ const qdrant = new QdrantClient({
   apiKey: process.env.QDRANT_API_KEY
 })
 
-// Load a lightweight, fast local embedding model once when server starts
 let embedder = null;
 async function getEmbedder() {
   if (!embedder) {
@@ -66,7 +65,6 @@ app.post("/upload", upload.array("pdf"), async (req, res) => {
     const userQuery = req.body.userQuery;
     const pointsToUpsert = [];
 
-    // Loop through each uploaded PDF file
     for (const file of req.files) {
       const fileBuffer = fs.readFileSync(file.path);
       const dataArray = new Uint8Array(fileBuffer);
@@ -105,20 +103,15 @@ app.post("/upload", upload.array("pdf"), async (req, res) => {
           limit: 1,
         })
 
-      // console.log("Qdrant search results:", JSON.stringify(searchResults, null, 2))
-
         if(searchResults.points && searchResults.points.length > 0){
           bestMatch = searchResults.points[0]?.payload?.text || "";
         }
     }
-
-    // console.log('Best Match Text:', bestMatch)
  
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
       contents: `Answer the question using the context: ${bestMatch}\n\nQuestion: ${userQuery}`
     });
-
     res.send(response.text);
 
   } catch (error) {
