@@ -22,7 +22,7 @@ const ai = new GoogleGenAI({
 
 const qdrant = new QdrantClient({
   url: process.env.QDRANT_URL,
-  apiKey: process.env.QRANT_API_KEY
+  apiKey: process.env.QDRANT_API_KEY
 })
 
 // Load a lightweight, fast local embedding model once when server starts
@@ -99,14 +99,20 @@ app.post("/upload", upload.array("pdf"), async (req, res) => {
     let bestMatch = "";
     if(userQuery){
         const queryEmbedding = await createEmbedding(userQuery);
-        const searchResults = await qdrant.search('pdf-docs', {
-          vector: queryEmbedding,
+        const searchResults = await qdrant.query('pdf-docs', {
+          query: queryEmbedding,
+          with_payload: true,
           limit: 1,
         })
-        if(searchResults.length > 0){
-          bestMatch = searchResults[0].payload.text;
+
+      // console.log("Qdrant search results:", JSON.stringify(searchResults, null, 2))
+
+        if(searchResults.points && searchResults.points.length > 0){
+          bestMatch = searchResults.points[0]?.payload?.text || "";
         }
     }
+
+    // console.log('Best Match Text:', bestMatch)
  
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
