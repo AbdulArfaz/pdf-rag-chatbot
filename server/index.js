@@ -6,6 +6,8 @@ import { extractText, getDocumentProxy } from 'unpdf';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { GoogleGenAI } from "@google/genai";
 import { pipeline } from '@xenova/transformers';
+import { QdrantClient } from '@qdrant/js-client-rest';
+import crypto from 'crypto';
 
 const app = express();
 const upload = multer({ dest: "uploads" });
@@ -16,6 +18,11 @@ app.get("/", (req, res) => {
 
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
+})
+
+const qdrant = new QdrantClient({
+  url: process.env.QDRANT_URL,
+  apiKey: process.env.QRANT_API_KEY
 })
 
 // Load a lightweight, fast local embedding model once when server starts
@@ -33,26 +40,22 @@ async function createEmbedding(text) {
   return Array.from(output.data);
 }
 
-function cosineSimilarity(vecA, vecB) {
-  let dotProduct = 0;
-  let magnitudeA = 0;
-  let magnitudeB = 0;
 
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    magnitudeA += vecA[i] * vecA[i];
-    magnitudeB += vecB[i] * vecB[i];
+app.get('/pdf-store', async (req, res)=>{
+  try {
+     await qdrant.createCollection('pdf-docs', {
+      vectors: {
+        size: 384,
+        distance: "Cosine",
+      },     
+     })
+      res.send('collection is created')
+  } catch (error) {
+    console.log(error)
+    res.status(500).send(error)
   }
+})
 
-  magnitudeA = Math.sqrt(magnitudeA);
-  magnitudeB = Math.sqrt(magnitudeB);
-
-  if (magnitudeA === 0 || magnitudeB === 0) return 0;
-  return dotProduct / (magnitudeA * magnitudeB);
-}
-
-// Global array to hold embeddings across all uploads
-const globalChunkEmbeddings = [];
 
 app.post("/upload", upload.array("pdf"), async (req, res) => {
   try {
@@ -61,6 +64,7 @@ app.post("/upload", upload.array("pdf"), async (req, res) => {
     }
 
     const userQuery = req.body.userQuery;
+    const pointsToUpsert = [];
 
     // Loop through each uploaded PDF file
     for (const file of req.files) {
@@ -80,25 +84,30 @@ app.post("/upload", upload.array("pdf"), async (req, res) => {
 
       for (const chunk of chunks) {
         const embeddings = await createEmbedding(chunk.pageContent);
-        globalChunkEmbeddings.push({
-          text: chunk.pageContent,
-          embeddings
+        pointsToUpsert.push({
+          id: crypto.randomUUID(),
+          vector: embeddings,
+          payload: { text: chunk.pageContent }
         });
       }
     }
-
-    const queryEmbedding = await createEmbedding(userQuery);
-    let bestMatch = null;
-    let highestScore = -1;
-
-    for (const item of globalChunkEmbeddings) {
-      const score = cosineSimilarity(queryEmbedding, item.embeddings);
-      if (score > highestScore) {
-        highestScore = score;
-        bestMatch = item.text;
-      }
+    await qdrant.upsert('pdf-docs', {
+      wait: true,
+      points: pointsToUpsert,
+    })
+     
+    let bestMatch = "";
+    if(userQuery){
+        const queryEmbedding = await createEmbedding(userQuery);
+        const searchResults = await qdrant.search('pdf-docs', {
+          vector: queryEmbedding,
+          limit: 1,
+        })
+        if(searchResults.length > 0){
+          bestMatch = searchResults[0].payload.text;
+        }
     }
-
+ 
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash-lite',
       contents: `Answer the question using the context: ${bestMatch}\n\nQuestion: ${userQuery}`
