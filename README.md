@@ -4,13 +4,13 @@ An intelligent, production-grade Retrieval-Augmented Generation (RAG) web applic
 
 ## 🌐 Live Link
 
-* Live Application: [Your Deployed Frontend URL Here]
+* Live Application: [https://pdf-rag-chatbot-wine.vercel.app/](https://pdf-rag-chatbot-wine.vercel.app/)
 
 ## 📸 Screenshots
 
 | Application Interface | PDF Ingestion & Chat Q&A |
 | :---: | :---: |
-| ![Application Interface](./assets/chat.png) | ![PDF Ingestion & Chat](./assets/chat2.png) |
+| ![Application Interface](./assets/pdf-vercel.png) | ![PDF Ingestion & Chat](./assets/chat2.png) |
 
 ## 📊 Core Features & Capabilities
 
