@@ -10,7 +10,7 @@ An intelligent, production-grade Retrieval-Augmented Generation (RAG) web applic
 
 | Application Interface | PDF Ingestion & Chat Q&A |
 | :---: | :---: |
-| ![Application Interface](./assets/screenshot1.png) | ![PDF Ingestion & Chat](./assets/screenshot2.png) |
+| ![Application Interface](./assets/chat.png) | ![PDF Ingestion & Chat](./assets/chat2.png) |
 
 ## 📊 Core Features & Capabilities
 

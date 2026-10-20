@@ -30,7 +30,6 @@ function ChatPDF() {
       });
 
       setAnswer(res.data); 
-      setUserQuery("");
     } catch (error) {
       console.error("Error uploading file:", error);
       alert("Something went wrong!");
