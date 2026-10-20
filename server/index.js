@@ -5,6 +5,8 @@ import pdfRoutes from './src/routes/pdfRoutes.js';
 
 const app = express();
 
+const PORT = process.env.PORT || 3000;
+
 app.use(cors({
   origin: "http://localhost:5173", 
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -20,5 +22,5 @@ app.get("/", (req, res) => {
 app.use("/",pdfRoutes);
 
 app.listen(3000, () => {
-  console.log(`Server is running on port 3000`);
+  console.log(`Server is running on port ${PORT}`);
 });
